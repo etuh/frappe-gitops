@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frappe
+  namespace: default
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: frappe
+
+  template:
+    metadata:
+      labels:
+        app: frappe
+
+    spec:
+      containers:
+        - name: frappe
+
+          image: ghcr.io/etuh/frappe:2026-05-08
+
+          ports:
+            - containerPort: 8000
+
+          imagePullPolicy: Always
