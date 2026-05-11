@@ -1,0 +1,32 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: frappe-migrate
+  labels:
+    app: frappe
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app: frappe
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migrate
+          image: ghcr.io/etuh/frappe:2026-05-08
+          imagePullPolicy: Always
+          command: ["/bin/sh", "-c"]
+          args:
+            - bench migrate
+          volumeMounts:
+            - name: sites
+              mountPath: /data
+      volumes:
+        - name: sites
+          persistentVolumeClaim:
+            claimName: frappe-sites

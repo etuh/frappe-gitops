@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: frappe
+  annotations:
+    cert-manager.io/cluster-issuer: local-selfsigned
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - frappe.example.com
+      secretName: frappe-tls
+  rules:
+    - host: frappe.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frappe-service
+                port:
+                  number: 8000

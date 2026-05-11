@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frappe
+  labels:
+    app: frappe
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frappe
+  template:
+    metadata:
+      labels:
+        app: frappe
+    spec:
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: frappe
+          image: ghcr.io/etuh/frappe:2026-05-08
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+          readinessProbe:
+            httpGet:
+              path: /api/method/ping
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/method/ping
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+          volumeMounts:
+            - name: sites
+              mountPath: /home/frappe/frappe-bench/sites
+            - name: logs
+              mountPath: /home/frappe/frappe-bench/logs
+      volumes:
+        - name: sites
+          persistentVolumeClaim:
+            claimName: frappe-sites
+        - name: logs
+          emptyDir: {}
