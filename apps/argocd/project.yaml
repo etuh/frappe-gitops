@@ -3,6 +3,8 @@ kind: AppProject
 metadata:
   name: frappe-platform
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
 spec:
   description: GitOps for the Frappe platform and supporting services.
   sourceRepos:

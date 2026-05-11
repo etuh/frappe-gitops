@@ -15,6 +15,9 @@ spec:
       labels:
         app: frappe
     spec:
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: "OnRootMismatch"
       restartPolicy: OnFailure
       containers:
         - name: migrate
