@@ -2,7 +2,12 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: frappe-sites
+  namespace: frappe
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+    argocd.argoproj.io/sync-options: Delete=false
 spec:
+  storageClassName: local-path
   accessModes:
     - ReadWriteOnce
   resources:
