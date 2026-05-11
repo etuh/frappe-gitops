@@ -11,19 +11,29 @@ echo "======================================"
 sudo apt-get update
 
 sudo apt-get install -y \
-	curl \
-	gnupg \
-	software-properties-common \
-	unzip
+  curl \
+  gnupg \
+  software-properties-common \
+  unzip
 
 curl -fsSL https://apt.releases.hashicorp.com/gpg | \
-	sudo gpg --dearmor \
-	-o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+  sudo gpg --dearmor \
+  -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+
+. /etc/os-release
+
+# Linux Mint reports VERSION_CODENAME=virginia,
+# but HashiCorp repo expects Ubuntu codename.
+if [[ -n "${UBUNTU_CODENAME:-}" ]]; then
+  OS_CODENAME="$UBUNTU_CODENAME"
+else
+  OS_CODENAME="$VERSION_CODENAME"
+fi
 
 echo \
 "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] \
 https://apt.releases.hashicorp.com \
-$(lsb_release -cs) main" | \
+${OS_CODENAME} main" | \
 sudo tee /etc/apt/sources.list.d/hashicorp.list
 
 sudo apt-get update
@@ -36,7 +46,7 @@ echo "Installing K3s (disable Traefik)"
 echo "======================================"
 
 curl -sfL https://get.k3s.io | \
-INSTALL_K3S_EXEC="--disable traefik" sh -
+INSTALL_K3S_EXEC="--disable traefik --kubelet-arg=eviction-hard=imagefs.available<1%,nodefs.available<1%" sh -
 
 echo "======================================"
 echo "Configuring kubectl"
@@ -57,31 +67,31 @@ echo "Creating namespaces"
 echo "======================================"
 
 kubectl create namespace argocd \
-	--dry-run=client -o yaml | kubectl apply -f -
+  --dry-run=client -o yaml | kubectl apply -f -
 
 kubectl create namespace cert-manager \
-	--dry-run=client -o yaml | kubectl apply -f -
+  --dry-run=client -o yaml | kubectl apply -f -
 
 echo "======================================"
 echo "Installing ArgoCD"
 echo "======================================"
 
 kubectl apply \
-	-n argocd \
-	--server-side \
-	--force-conflicts \
-	-f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+  -n argocd \
+  --server-side \
+  --force-conflicts \
+  -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 
 kubectl rollout status \
-	deployment/argocd-server \
-	-n argocd \
-	--timeout=300s
+  deployment/argocd-server \
+  -n argocd \
+  --timeout=300s
 
 echo "======================================"
 echo "Installing ArgoCD CLI"
 echo "======================================"
 
-curl -sSL -o argocd-linux-amd64 \
+curl -o argocd-linux-amd64 \
 https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
 
 sudo install -m 555 argocd-linux-amd64 \
@@ -99,8 +109,11 @@ https://github.com/cert-manager/cert-manager/releases/latest/download/cert-manag
 kubectl rollout status \
 deployment/cert-manager \
 -n cert-manager \
+# --timeout=300s
+kubectl rollout status \
+deployment/cert-manager-webhook \
+-n cert-manager \
 --timeout=300s
-
 echo "======================================"
 echo "Creating local self-signed issuer"
 echo "======================================"
@@ -109,9 +122,9 @@ cat <<EOF | kubectl apply -f -
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
-	name: local-selfsigned
+  name: local-selfsigned
 spec:
-	selfSigned: {}
+  selfSigned: {}
 EOF
 
 echo "======================================"
@@ -134,16 +147,16 @@ svc/argocd-server \
 -n argocd \
 8080:443 >/dev/null 2>&1 &
 
-sleep 10
+# sleep 10
 
 echo "======================================"
 echo "Logging into ArgoCD"
 echo "======================================"
 
 argocd login localhost:8080 \
-	--username admin \
-	--password "$ARGOCD_PASSWORD" \
-	--insecure
+  --username admin \
+  --password "$ARGOCD_PASSWORD" \
+  --insecure
 
 echo "======================================"
 echo "Registering Git repository"
