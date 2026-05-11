@@ -28,7 +28,7 @@ spec:
             - bench migrate
           volumeMounts:
             - name: sites
-              mountPath: /data
+              mountPath: /home/frappe/frappe-bench/sites
       volumes:
         - name: sites
           persistentVolumeClaim:
