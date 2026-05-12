@@ -45,8 +45,19 @@ echo "======================================"
 echo "Installing K3s (disable Traefik)"
 echo "======================================"
 
+# Install K3s with:
+# - Traefik disabled (using your own ingress, e.g. NGINX or Argo-managed ingress)
+# - Real host DNS resolvers instead of systemd's 127.0.0.53 stub
+#   (fixes cluster DNS issues like ArgoCD failing to reach GitHub)
+# - Relaxed kubelet disk eviction thresholds
+#   (useful for homelab/dev machines with small disks)
+
 curl -sfL https://get.k3s.io | \
-INSTALL_K3S_EXEC="--disable traefik --kubelet-arg=eviction-hard=imagefs.available<1%,nodefs.available<1%" sh -
+INSTALL_K3S_EXEC="\
+  --disable traefik \
+  --resolv-conf=/run/systemd/resolve/resolv.conf \
+  --kubelet-arg=eviction-hard=imagefs.available<1%,nodefs.available<1%" \
+sh -
 
 echo "======================================"
 echo "Configuring kubectl"
