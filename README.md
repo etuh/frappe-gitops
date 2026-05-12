@@ -126,10 +126,10 @@ frappe-gitops/
 4. Configure DNS or `/etc/hosts`:
 
    ```
-   <your-k3s-node-ip> argocd.dairyndumberi.local frappe.example.com
+   <your-k3s-node-ip> argocd.dairyndumberi.local frappe.dairyndumberi.local
    ```
 
-   Update `frappe.example.com` to your internal domain.
+   Update `frappe.dairyndumberi.local` to your internal domain.
 
 5. Access Argo CD:
 
@@ -186,39 +186,32 @@ Frappe updates are managed via Git commits that change the image tag in
    cd frappe-gitops
    ```
 
-   Edit `apps/frappe/deployment.yaml` and change the image tag:
-
-   ```yaml
-   # Before
-   image: ghcr.io/etuh/frappe:2026-05-08
-
-   # After
-   image: ghcr.io/etuh/frappe:v16.0.5
+   ```bash
+   cd frappe-gitops/apps/frappe
+   kustomize edit set image ghcr.io/etuh/frappe=ghcr.io/etuh/frappe:v16.0.5
    ```
 
-   Also update `apps/frappe/migrate-job.yaml` with the same tag:
+   Alternatively, you can manually edit `apps/frappe/kustomization.yaml` and update the `newTag` parameter under the `images` section:
 
    ```yaml
-   # Before
-   image: ghcr.io/etuh/frappe:2026-05-08
-
-   # After
-   image: ghcr.io/etuh/frappe:v16.0.5
+   images:
+     - name: ghcr.io/etuh/frappe
+       newTag: "v16.0.5" # Update this to the new version
    ```
 
 3. **Commit and push**:
 
    ```bash
-   git add apps/frappe/
+   git add apps/frappe/kustomization.yaml
    git commit -m "frappe: bump image to v16.0.5"
    git push origin main
    ```
 
 4. **Argo CD syncs automatically** (or manually):
-   - Argo CD detects the change in Git within seconds.
-   - The `migrate-job.yaml` (PreSync hook) runs first to execute `bench migrate`.
-   - Then the new deployment rolls out.
-   - Old pods are gracefully terminated.
+   - Argo CD detects the change in Git within seconds and generates the manifests with the new image tag.
+   - The `init-job` (PreSync hook) runs first to execute `bench migrate` if the site exists or `bench new-site` if it doesn't.
+   - The `migrate-job` (PostSync hook) runs after a successful deployment to ensure any trailing migrations are successfully performed.
+   - The new deployment rolls out and old pods are gracefully terminated.
 
 5. **Verify the rollout**:
 
@@ -375,7 +368,7 @@ If running multiple clusters (dev, staging, prod):
 
 ## Next steps
 
-- [ ] Replace `frappe.example.com` with your internal domain in `apps/frappe/ingress.yaml`.
+- [ ] Replace `frappe.dairyndumberi.local` with your internal domain in `apps/frappe/ingress.yaml`.
 - [ ] Implement a secrets solution under `platform/secrets/`.
 - [ ] Add MariaDB and Redis manifests under `platform/mariadb/` and `platform/redis/`.
 - [ ] Add monitoring (Prometheus, Grafana) under `infrastructure/monitoring/`.

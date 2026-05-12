@@ -87,6 +87,8 @@ kind: Application
 metadata:
   name: mariadb
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
 spec:
   project: frappe-platform
   source:
@@ -108,6 +110,8 @@ kind: Application
 metadata:
   name: redis
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
 spec:
   project: frappe-platform
   source:
@@ -129,6 +133,8 @@ kind: Application
 metadata:
   name: secrets
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
 spec:
   project: frappe-platform
   source:
@@ -150,6 +156,8 @@ kind: Application
 metadata:
   name: frappe
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"
 spec:
   project: frappe-platform
   source:

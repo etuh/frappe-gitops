@@ -1,24 +1,17 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: frappe-migrate
-  labels:
-    app: frappe
+  name: frappe-init
+  namespace: frappe
   annotations:
-    argocd.argoproj.io/hook: PostSync
-    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 spec:
   backoffLimit: 3
-  ttlSecondsAfterFinished: 3600
   template:
-    metadata:
-      labels:
-        app: frappe
     spec:
-      securityContext:
-        fsGroup: 1000
-        fsGroupChangePolicy: "OnRootMismatch"
-      restartPolicy: OnFailure
+      serviceAccountName: default
+      restartPolicy: Never
       initContainers:
         - name: wait-for-db
           image: busybox:latest
@@ -31,37 +24,10 @@ spec:
                 sleep 2
               done
               echo "MariaDB is ready!"
-        - name: wait-for-cache
-          image: busybox:latest
-          command:
-            - sh
-            - -c
-            - |
-              until nc -z redis-master.redis.svc.cluster.local 6379; do
-                echo "Waiting for Redis..."
-                sleep 2
-              done
-              echo "Redis is ready!"
       containers:
-        - name: migrate
+        - name: frappe-init
           image: ghcr.io/etuh/frappe:2026-05-08
           imagePullPolicy: Always
-          command: ["/usr/local/bin/entrypoint.sh"]
-          args:
-            - /bin/bash
-            - -c
-            - |
-              bench migrate || {
-                EXIT_CODE=$?
-                if [ $EXIT_CODE -eq 0 ]; then
-                  exit 0
-                fi
-                # Check if error is about no migrations
-                if bench migrate 2>&1 | grep -q "Nothing to migrate"; then
-                  exit 0
-                fi
-                exit $EXIT_CODE
-              }
           env:
             - name: FRAPPE_SITE_NAME
               valueFrom:
@@ -90,6 +56,39 @@ spec:
                 secretKeyRef:
                   name: frappe-secrets
                   key: redis-password
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: frappe-secrets
+                  key: admin-password
+          command: ["/usr/local/bin/entrypoint.sh"]
+          args:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              SITE_NAME=$(echo "$FRAPPE_SITE_NAME")
+              echo "Initializing Frappe site: $SITE_NAME"
+
+              cd /home/frappe/frappe-bench
+
+              # Check if site already exists
+              if [ -d "sites/$SITE_NAME" ]; then
+                echo "Site $SITE_NAME already exists, running migrations..."
+                bench --site $SITE_NAME migrate
+              else
+                echo "Creating new site $SITE_NAME..."
+                bench new-site $SITE_NAME \
+                  --db-host=$DB_HOST \
+                  --db-port=$DB_PORT \
+                  --db-name=$DB_NAME \
+                  --db-user=$DB_USER \
+                  --db-password=$DB_PASSWORD \
+                  --mariadb-root-password=$DB_PASSWORD \
+                  --admin-password=$ADMIN_PASSWORD \
+                  --install-app frappe
+                echo "Site $SITE_NAME created successfully!"
+              fi
           volumeMounts:
             - name: sites
               mountPath: /home/frappe/frappe-bench/sites

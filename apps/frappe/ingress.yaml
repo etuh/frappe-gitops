@@ -9,10 +9,10 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - frappe.example.com
+        - frappe.dairyndumberi.local
       secretName: frappe-tls
   rules:
-    - host: frappe.example.com
+    - host: frappe.dairyndumberi.local
       http:
         paths:
           - path: /
