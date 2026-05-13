@@ -1,0 +1,48 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: frappe-site-init
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      volumes:
+        - name: sites
+          persistentVolumeClaim:
+            claimName: frappe-sites
+      containers:
+        - name: init
+          image: ghcr.io/etuh/frappe:2026-05-08
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              set -e
+              cd /home/frappe/frappe-bench
+              if [ ! -d "sites/${SITE_NAME}" ]; then
+                bench new-site ${SITE_NAME} \
+                  --mariadb-root-password ${DB_PASSWORD} \
+                  --admin-password ${ADMIN_PASSWORD} \
+                  --db-host ${DB_HOST}
+              fi
+              bench --site ${SITE_NAME} migrate
+          env:
+            - name: SITE_NAME
+              value: "frappe.dairyndumberi.local"
+            - name: DB_HOST
+              value: mariadb
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: frappe-secrets
+                  key: db-password
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: frappe-secrets
+                  key: admin-password
+          volumeMounts:
+            - name: sites
+              mountPath: /home/frappe/frappe-bench/sites

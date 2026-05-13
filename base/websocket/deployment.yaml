@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: websocket
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frappe
+      role: websocket
+  template:
+    metadata:
+      labels:
+        app: frappe
+        role: websocket
+    spec:
+      containers:
+        - name: websocket
+          image: ghcr.io/etuh/frappe:2026-05-08
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              cd /home/frappe/frappe-bench
+              export REDIS_SOCKETIO="redis://redis-queue:6379"
+              exec /home/frappe/frappe-bench/env/bin/node apps/frappe/socketio.js
+          env:
+            - name: SOCKETIO_PORT
+              value: "9000"
+          volumeMounts:
+            - name: sites
+              mountPath: /home/frappe/frappe-bench/sites
+      volumes:
+        - name: sites
+          persistentVolumeClaim:
+            claimName: frappe-sites

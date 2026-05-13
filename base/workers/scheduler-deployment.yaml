@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scheduler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frappe
+      role: scheduler
+  template:
+    metadata:
+      labels:
+        app: frappe
+        role: scheduler
+    spec:
+      containers:
+        - name: scheduler
+          image: custom-frappe:v16.17.0
+          command: ["/home/frappe/frappe-bench/env/bin/bench"]
+          args: ["--site", "$(SITE_NAME)", "schedule"]
+          env:
+            - name: SITE_NAME
+              value: "frappe.dairyndumberi.local"
+          volumeMounts:
+            - name: sites
+              mountPath: /home/frappe/frappe-bench/sites
+      volumes:
+        - name: sites
+          persistentVolumeClaim:
+            claimName: frappe-sites

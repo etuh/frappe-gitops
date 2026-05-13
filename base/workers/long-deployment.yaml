@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker-long
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frappe
+      role: worker-long
+  template:
+    metadata:
+      labels:
+        app: frappe
+        role: worker-long
+    spec:
+      containers:
+        - name: worker
+          image: custom-frappe:v16.17.0
+          command: ["/home/frappe/frappe-bench/env/bin/bench"]
+          args: ["--site", "$(SITE_NAME)", "worker", "--queue", "long"]
+          env:
+            - name: SITE_NAME
+              value: "frappe.dairyndumberi.local"
+          volumeMounts:
+            - name: sites
+              mountPath: /home/frappe/frappe-bench/sites
+      volumes:
+        - name: sites
+          persistentVolumeClaim:
+            claimName: frappe-sites

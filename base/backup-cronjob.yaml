@@ -1,0 +1,28 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: frappe-backup
+spec:
+  schedule: "0 2 * * *"
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: backup
+              image: image: ghcr.io/etuh/frappe:2026-05-08
+              command: ["/home/frappe/frappe-bench/env/bin/bench"]
+              args: ["--site", "$(SITE_NAME)", "backup", "--with-files"]
+              env:
+                - name: SITE_NAME
+                  value: "frappe.dairyndumberi.local"
+              volumeMounts:
+                - name: sites
+                  mountPath: /home/frappe/frappe-bench/sites
+          volumes:
+            - name: sites
+              persistentVolumeClaim:
+                claimName: frappe-sites

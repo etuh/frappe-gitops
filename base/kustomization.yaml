@@ -1,0 +1,25 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: frappe
+
+resources:
+  - namespace.yaml
+  - pvc.yaml
+  - site-init-job.yaml
+  - backup-cronjob.yaml
+  - mariadb/statefulset.yaml
+  - mariadb/service.yaml
+  - redis/cache-deployment.yaml
+  - redis/queue-deployment.yaml
+  - redis/services.yaml
+  - backend/deployment.yaml
+  - backend/service.yaml
+  - websocket/deployment.yaml
+  - websocket/service.yaml
+  - workers/short-deployment.yaml
+  - workers/long-deployment.yaml
+  - workers/scheduler-deployment.yaml
+  - nginx/configmap.yaml
+  - nginx/deployment.yaml
+  - nginx/service.yaml
+  - nginx/ingress.yaml

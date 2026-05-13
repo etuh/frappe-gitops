@@ -1,0 +1,8 @@
+# Environment dependencies
+.env
+
+# MacOS / OS specific
+.DS_Store
+
+# Git local config
+.git/

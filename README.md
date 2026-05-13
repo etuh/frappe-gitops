@@ -1,395 +1,127 @@
-# Frappe GitOps
+# Frappe GitOps Setup
 
-This repository is the GitOps source of truth for a production K3s cluster running
-Frappe with Argo CD, cert-manager, and supporting services. It uses the app-of-apps
-pattern with Argo CD as the single point of control for all cluster state.
+This repository contains a complete, minimal, production-ready Kubernetes setup for deploying Frappe (ERPNext + HRMS) using GitOps principles and **ArgoCD**. It includes configurations for generating a custom Frappe Docker image with specific applications pre-installed and deploying all necessary services.
 
----
+## 🚀 Architecture
 
-## Repository structure
+The cluster runs the following Frappe components:
 
-```
-frappe-gitops/
-├── bootstrap/
-│   ├── terraform/
-│   │   ├── main.tf
-│   │   ├── providers.tf
-│   │   ├── variables.tf
-│   │   └── outputs.tf
-│   └── scripts/
-│       └── install.sh
-├── clusters/
-│   ├── dev/
-│   │   ├── root-app.yaml
-│   │   └── namespaces.yaml
-│   ├── staging/
-│   │   ├── root-app.yaml
-│   │   └── namespaces.yaml
-│   └── prod/
-│       ├── root-app.yaml
-│       └── namespaces.yaml
-├── infrastructure/
-│   ├── cert-manager/
-│   │   ├── kustomization.yaml
-│   │   └── namespace.yaml
-│   ├── ingress/
-│   │   ├── kustomization.yaml
-│   │   └── namespace.yaml
-│   ├── storage/
-│   │   ├── kustomization.yaml
-│   │   └── namespace.yaml
-│   └── monitoring/
-│       ├── kustomization.yaml
-│       └── namespace.yaml
-├── platform/
-│   ├── mariadb/
-│   │   ├── kustomization.yaml
-│   │   └── namespace.yaml
-│   ├── redis/
-│   │   ├── kustomization.yaml
-│   │   └── namespace.yaml
-│   └── secrets/
-│       ├── kustomization.yaml
-│       └── namespace.yaml
-└── apps/
-    ├── frappe/
-    │   ├── deployment.yaml
-    │   ├── service.yaml
-    │   ├── ingress.yaml
-    │   ├── pvc.yaml
-    │   ├── migrate-job.yaml
-    │   └── kustomization.yaml
-    └── argocd/
-        ├── project.yaml
-        ├── applications.yaml
-        └── argocd-ingress.yaml
+- **MariaDB** (Database + PVC)
+- **Redis Cache & Redis Queue** (Caching and Background Jobs)
+- **Frappe Backend** (Gunicorn)
+- **Frappe Websocket** (Node.js SocketIO for realtime events)
+- **Frappe Workers** (Short queues, Long queues, and Scheduled jobs)
+- **Nginx** (Reverse proxy + Static Assets)
+- **Init Configurator** (Sidecar pattern that automatically generates `common_site_config.json`)
+- **Site-Init PreSync Job** (Automatically bootstraps sites dynamically)
+
+All Frappe pods (Backend, Workers, Nginx) share a single `ReadWriteMany` Persistent Volume Claim (`frappe-sites`) storing site assets and logs.
+
+## 📁 Repository Structure
+
+```text
+.
+├── argocd/                # ArgoCD Application manifest
+├── base/                  # Base Kubernetes manifests (Deployments, Services, PV, PVC, Secrets)
+├── build/                 # Scripts and Containerfile for building the custom docker image
+└── overlays/
+    └── production/        # Environment-specific patches (e.g., replicas, specialized tags)
 ```
 
----
+## 🛠️ Building the Custom Image
 
-## Key design decisions
+The project packages apps directly into the Docker image at build time (rather than dynamically at runtime) to ensure determinism and scalability.
 
-- **K3s cluster**: Traefik is disabled; NGINX ingress controller is expected.
-- **Immutable images**: Always use specific tags (e.g., `v16.0.3`), never `latest`.
-- **App-of-apps**: Root app in `clusters/prod/root-app.yaml` syncs all infrastructure,
-  platform, and app workloads via `apps/argocd/applications.yaml`.
-- **Self-signed TLS**: Uses `local-selfsigned` ClusterIssuer for `.local` domains.
-- **Deterministic rollbacks**: Image tags ensure rollback reliability.
-- **Migration hooks**: `migrate-job.yaml` is a PreSync hook that runs before deployment.
-- **Multi-environment ready**: `clusters/dev`, `clusters/staging`, `clusters/prod`.
-
----
-
-## Bootstrap and initial setup
-
-### Prerequisites
-
-- A Linux node (Debian/Ubuntu) with sudo access.
-- Git access to https://github.com/etuh/frappe-gitops.git
-- Internet access for package downloads.
-
-### Install
-
-1. Clone the repository:
-
-   ```bash
-   git clone https://github.com/etuh/frappe-gitops.git
-   cd frappe-gitops
-   ```
-
-2. Run the bootstrap script:
-
-   ```bash
-   ./bootstrap/scripts/install.sh
-   ```
-
-   This script:
-   - Installs Terraform (optional, for future IaC).
-   - Installs K3s with Traefik disabled.
-   - Installs Argo CD and the Argo CD CLI.
-   - Installs cert-manager and creates a self-signed ClusterIssuer.
-   - Registers this Git repository with Argo CD.
-   - Applies the root app to bootstrap the cluster.
-
-3. After bootstrap, install an ingress controller:
-
-   ```bash
-   kubectl create namespace ingress-nginx
-   helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
-   helm install ingress-nginx ingress-nginx/ingress-nginx \
-     -n ingress-nginx \
-     --set controller.service.type=NodePort \
-     --set controller.service.nodePorts.http=80 \
-     --set controller.service.nodePorts.https=443
-   ```
-
-4. Configure DNS or `/etc/hosts`:
-
-   ```
-   <your-k3s-node-ip> argocd.dairyndumberi.local frappe.dairyndumberi.local
-   ```
-
-   Update `frappe.dairyndumberi.local` to your internal domain.
-
-5. Access Argo CD:
-
-   ```
-   https://argocd.dairyndumberi.local
-   ```
-
-   The admin password is printed by the bootstrap script.
-
----
-
-## Argo CD app-of-apps architecture
-
-The root application (`clusters/prod/root-app.yaml`) manages everything:
-
-```
-root-app (Argo CD manages this)
-  ├── argocd (manages the ArgoCD project and all child apps)
-  │   ├── cert-manager
-  │   ├── ingress
-  │   ├── storage
-  │   ├── monitoring
-  │   ├── mariadb
-  │   ├── redis
-  │   ├── secrets
-  │   └── frappe
-```
-
-**Why this matters**:
-
-- Argo CD is self-managed; it syncs its own definitions.
-- All infrastructure is declarative and version-controlled.
-- Rollback any change by reverting Git commits.
-
----
-
-## Updating Frappe to a new image
-
-Frappe updates are managed via Git commits that change the image tag in
-`apps/frappe/deployment.yaml`.
-
-### Workflow
-
-1. **Build a new Frappe image** (in your build pipeline, not in this repo):
-
-   ```bash
-   docker build -t ghcr.io/etuh/frappe:v16.0.5 .
-   docker push ghcr.io/etuh/frappe:v16.0.5
-   ```
-
-2. **Update the deployment in this repo**:
-
-   ```bash
-   cd frappe-gitops
-   ```
-
-   ```bash
-   cd frappe-gitops/apps/frappe
-   kustomize edit set image ghcr.io/etuh/frappe=ghcr.io/etuh/frappe:v16.0.5
-   ```
-
-   Alternatively, you can manually edit `apps/frappe/kustomization.yaml` and update the `newTag` parameter under the `images` section:
-
-   ```yaml
-   images:
-     - name: ghcr.io/etuh/frappe
-       newTag: "v16.0.5" # Update this to the new version
-   ```
-
-3. **Commit and push**:
-
-   ```bash
-   git add apps/frappe/kustomization.yaml
-   git commit -m "frappe: bump image to v16.0.5"
-   git push origin main
-   ```
-
-4. **Argo CD syncs automatically** (or manually):
-   - Argo CD detects the change in Git within seconds and generates the manifests with the new image tag.
-   - The `init-job` (PreSync hook) runs first to execute `bench migrate` if the site exists or `bench new-site` if it doesn't.
-   - The `migrate-job` (PostSync hook) runs after a successful deployment to ensure any trailing migrations are successfully performed.
-   - The new deployment rolls out and old pods are gracefully terminated.
-
-5. **Verify the rollout**:
-
-   ```bash
-   kubectl rollout status deployment/frappe -n frappe
-   kubectl get pods -n frappe
-   ```
-
-### Rollback
-
-To roll back to a previous image:
-
-1. Find the commit with the old tag:
-
-   ```bash
-   git log --oneline apps/frappe/deployment.yaml
-   ```
-
-2. Revert the commit:
-
-   ```bash
-   git revert <commit-hash>
-   git push origin main
-   ```
-
-3. Argo CD automatically syncs the rollback. Migrations are idempotent, so
-   running them again is safe.
-
----
-
-## Secrets management
-
-Currently, no secrets are committed. To deploy credentials:
-
-1. **Create a Secret in the cluster manually** (temporary, for bootstrap):
-
-   ```bash
-   kubectl create secret generic frappe-secrets \
-     --from-literal=MYSQL_PASSWORD=<password> \
-     --from-literal=REDIS_PASSWORD=<password> \
-     -n frappe
-   ```
-
-2. **For production, use one of**:
-   - **Sealed Secrets**: Commit encrypted secrets to Git.
-   - **External Secrets Operator**: Reference external vaults (e.g., AWS Secrets Manager).
-   - **HashiCorp Vault**: Self-hosted secrets backend.
-
-   These go in `platform/secrets/`. Choose one and implement in production.
-
----
-
-## Environment separation
-
-Each environment has its own root app:
-
-### Dev
+To build the image locally:
 
 ```bash
-kubectl apply -f clusters/dev/root-app.yaml
+./build/build.sh
 ```
 
-### Staging
+This runs `podman build` constructing the `custom-frappe:v16.17.0` image containing `erpnext` and `hrms`.
 
-```bash
-kubectl apply -f clusters/staging/root-app.yaml
-```
+> _Note: Before deploying to a cloud-based Kubernetes cluster, you must tag and push this image to a Docker registry your cluster can access, then update the image references in the `base/` manifests._
 
-### Production
+## ☸️ Deployment via ArgoCD
 
-```bash
-kubectl apply -f clusters/prod/root-app.yaml
-```
+1. **Secure your Secrets**: Do not commit plaintext secrets. Use a GitOps-compatible secret manager such as Sealed Secrets or External Secrets. This repo includes templates only.
+2. **Apply the Application Configuration**:
+   Apply the ArgoCD `Application` resource, which points to the `overlays/production` directory of this repo.
 
-To use environment-specific overrides (e.g., different replica counts, resource
-limits), add `kustomization.yaml` overlays in each environment.
-
----
-
-## Operations
-
-### Monitor Argo CD applications
-
-```bash
-argocd app list
-argocd app status <app-name>
-argocd app sync <app-name>
-argocd app diff <app-name>
-```
-
-### Manual sync
-
-```bash
-argocd app sync root-app
-```
-
-### Check Frappe deployment status
-
-```bash
-kubectl get deployment frappe -n frappe
-kubectl logs -n frappe -l app=frappe --tail=100
-```
-
-### View migration job logs
-
-```bash
-kubectl logs -n frappe -l app=frappe,job-name=frappe-migrate
-```
-
-### Scale Frappe replicas
-
-Edit `apps/frappe/deployment.yaml`:
-
-```yaml
-spec:
-  replicas: 3 # Change from 2
-```
-
-Commit and push. Argo CD will scale up.
-
----
-
-## Multi-environment strategy
-
-If running multiple clusters (dev, staging, prod):
-
-1. Create separate Git branches or subdirectories for each environment.
-2. Point each cluster's root app to its respective path:
-
-   ```yaml
-   # dev/root-app.yaml
-   path: apps/argocd
+   ```bash
+   kubectl apply -f argocd/application.yaml
    ```
 
-   ```yaml
-   # staging/root-app.yaml
-   path: apps/argocd
+3. **Automation Check**:
+   When ArgoCD performs a sync, it will first execute the `PreSync` job located in `base/site-init-job.yaml`. This ensures the site (`frappe.dairyndumberi.local`) is created and DB schemas are migrated properly before starting the backend deployments.
+
+## ⚙️ Configuration Adjustments
+
+- **Site Name**: You can customize your site's name by updating the `SITE_NAME` environment variable within `base/backend/deployment.yaml` and `base/site-init-job.yaml`.
+- **Replicas**: You can scale workloads by updating the replica counts either in the base files or in Kustomize patches (e.g., `overlays/production/patch-replicas.yaml`).
+- **Storage**: By default, `base/pvc.yaml` requests `10Gi` via default storage class. Make sure your cluster's StorageClass supports `ReadWriteMany` (RWX) access modes (like NFS or EFS).
+
+## Secret Management (Required)
+
+This repo ships only templates:
+
+- `base/secrets.example.yaml` (plaintext example, never commit real values)
+- `base/secrets.encrypted.yaml` (SealedSecret shape, placeholder only)
+
+Use one of these approaches:
+
+- **Sealed Secrets**: create a sealed secret and include only the encrypted manifest in Git.
+- **External Secrets Operator**: sync secrets from a cloud secrets manager.
+- **ArgoCD Vault Plugin**: render secrets at deploy time from a vault backend.
+
+If you are using Sealed Secrets:
+
+1. Create a Secret manifest from the example (or use `kubectl create secret`).
+2. Seal it and save to your overlay:
+
+   ```bash
+   kubeseal --format yaml < base/secrets.example.yaml > overlays/production/secrets.encrypted.yaml
    ```
 
-   ```yaml
-   # prod/root-app.yaml
-   path: apps/argocd
-   ```
+3. Add `overlays/production/secrets.encrypted.yaml` to `overlays/production/kustomization.yaml`.
 
-3. Add per-environment overlays:
+The secret must be named `frappe-secrets` and include keys `db-password` and `admin-password`.
 
-   ```
-   apps/frappe/overlays/dev/
-   apps/frappe/overlays/staging/
-   apps/frappe/overlays/prod/
-   ```
+### Sealed Secrets Controller Prerequisite
 
----
+The cluster must have the Bitnami Sealed Secrets controller installed before syncing this application. Without the controller, `SealedSecret` resources will not be decrypted into Kubernetes `Secret` objects.
 
-## Next steps
+## Storage Requirements (RWX)
 
-- [ ] Replace `frappe.dairyndumberi.local` with your internal domain in `apps/frappe/ingress.yaml`.
-- [ ] Implement a secrets solution under `platform/secrets/`.
-- [ ] Add MariaDB and Redis manifests under `platform/mariadb/` and `platform/redis/`.
-- [ ] Add monitoring (Prometheus, Grafana) under `infrastructure/monitoring/`.
-- [ ] Test disaster recovery: delete a node and verify automatic recovery.
+The shared `frappe-sites` PVC uses `ReadWriteMany`. Your cluster must provide an RWX-capable StorageClass (NFS, CephFS, EFS, etc.). This repo defaults to `storageClassName: rwx-storage-class` in `base/pvc.yaml`; set it to the RWX class name available in your cluster.
 
----
+## Ingress (Local Network)
 
-## What makes this production-ready
+The base manifests include an Ingress at `base/nginx/ingress.yaml` for `frappe.dairyndumberi.local` **without TLS** (plain HTTP).
 
-1. **App-of-apps**: Single source of truth; GitOps controls everything.
-2. **Image tags**: Deterministic rollbacks; never `latest`.
-3. **Migration hooks**: Schema upgrades run before deployment.
-4. **Multi-environment**: Dev, staging, prod separation.
-5. **Self-healing**: Argo CD auto-syncs; failed deployments are reconciled.
-6. **Audit trail**: Every change is a Git commit.
+Ensure:
 
----
+- An Ingress controller (e.g., NGINX Ingress) is installed in your cluster.
+- `frappe.dairyndumberi.local` resolves to your Ingress controller’s external IP (add to `/etc/hosts` or configure local DNS).
 
-## References
+## Backup Strategy
 
-- [Argo CD documentation](https://argo-cd.readthedocs.io/)
-- [GitOps best practices](https://github.com/weaveworks/awesome-gitops)
-- [K3s documentation](https://docs.k3s.io/)
-- [cert-manager documentation](https://cert-manager.io/)
+A daily backup CronJob is included at `base/backup-cronjob.yaml` and runs:
+
+```bash
+bench --site frappe.dairyndumberi.local backup --with-files
+```
+
+This stores backups in the sites volume. For durable disaster recovery, ship generated backup files to external storage (S3, Azure Blob, GCS, or NFS).
+
+## 🚀 First-time Cluster Setup
+
+If you are bootstrapping a completely new server (or local VM), a utility script is provided to automate installing K3s, ArgoCD, and bootstrapping this repository immediately to the cluster.
+
+To execute the setup, run:
+
+```bash
+./scripts/install.sh
+```
+
+Ensure your `scripts/install.sh` points to your GitHub Repository URL prior to running it.

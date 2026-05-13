@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frappe
+      role: backend
+  template:
+    metadata:
+      labels:
+        app: frappe
+        role: backend
+    spec:
+      initContainers:
+        - name: configurator
+          image: alpine/curl:latest
+          env:
+            - name: DB_HOST
+              value: mariadb
+            - name: DB_PORT
+              value: "3306"
+            - name: REDIS_CACHE
+              value: redis-cache:6379
+            - name: REDIS_QUEUE
+              value: redis-queue:6379
+          volumeMounts:
+            - name: sites
+              mountPath: /home/frappe/frappe-bench/sites
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z mariadb 3306; do sleep 2; done
+              until nc -z redis-cache 6379; do sleep 2; done
+              until nc -z redis-queue 6379; do sleep 2; done
+              cat > /home/frappe/frappe-bench/sites/common_site_config.json <<INNEREOF
+              {
+                "db_host": "${DB_HOST}",
+                "db_port": "${DB_PORT}",
+                "redis_cache": "redis://${REDIS_CACHE}",
+                "redis_queue": "redis://${REDIS_QUEUE}",
+                "redis_socketio": "redis://${REDIS_QUEUE}",
+                "socketio_port": 9000,
+                "webserver_port": 8000
+              }
+              INNEREOF
+      containers:
+        - name: backend
+          image: ghcr.io/etuh/frappe:2026-05-08
+          command: ["/home/frappe/frappe-bench/env/bin/gunicorn"]
+          args:
+            - "--chdir=/home/frappe/frappe-bench/sites"
+            - "--bind=0.0.0.0:8000"
+            - "--workers=4"
+            - "--worker-class=gthread"
+            - "frappe.app:application"
+          env:
+            - name: SITE_NAME
+              value: "frappe.dairyndumberi.local"
+          volumeMounts:
+            - name: sites
+              mountPath: /home/frappe/frappe-bench/sites
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /api/method/frappe.ping
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+      volumes:
+        - name: sites
+          persistentVolumeClaim:
+            claimName: frappe-sites
