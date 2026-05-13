@@ -3,12 +3,12 @@ set -euo pipefail
 
 REPO_URL="https://github.com/etuh/frappe-gitops.git"
 ARGOCD_HOST="argocd.dairyndumberi.local"
+FRAPPE_HOST="frappe.dairyndumberi.local"
 
 echo "======================================"
-echo "Installing K3s (Disable Traefik & ServiceLB)"
+echo "Installing K3s (Disable ServiceLB only, keep Traefik)"
 echo "======================================"
 curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="\
-  --disable=traefik \
   --disable=servicelb \
   --write-kubeconfig-mode=644" \
 sh -
@@ -30,9 +30,12 @@ kubectl create namespace cert-manager --dry-run=client -o yaml | kubectl apply -
 kubectl create namespace frappe --dry-run=client -o yaml | kubectl apply -f -
 
 echo "======================================"
-echo "Installing ArgoCD (Without Internal TLS)"
+echo "Installing ArgoCD (Server-Side Apply)"
 echo "======================================"
-kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+kubectl delete crd applicationsets.argoproj.io --ignore-not-found
+kubectl apply --server-side --force-conflicts \
+  -n argocd \
+  -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 kubectl rollout status deployment/argocd-server -n argocd --timeout=300s
 
 echo "======================================"
@@ -68,14 +71,7 @@ spec:
 EOF
 
 echo "======================================"
-echo "ArgoCD admin password"
-echo "======================================"
-ARGOCD_PASSWORD=$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d)
-echo "$ARGOCD_PASSWORD"
-echo "Login to ArgoCD using this command: argocd login $ARGOCD_HOST --username admin --password $ARGOCD_PASSWORD --insecure"
-
-echo "======================================"
-echo "Creating ArgoCD Ingress"
+echo "Creating ArgoCD Ingress (using Traefik, self-signed TLS)"
 echo "======================================"
 cat <<EOF | kubectl apply -f -
 apiVersion: networking.k8s.io/v1
@@ -85,8 +81,8 @@ metadata:
   namespace: argocd
   annotations:
     cert-manager.io/cluster-issuer: local-selfsigned
-    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
-    nginx.ingress.kubernetes.io/rewrite-target: /
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
 spec:
   tls:
   - hosts:
@@ -106,6 +102,34 @@ spec:
 EOF
 
 echo "======================================"
+echo "ArgoCD admin password"
+echo "======================================"
+ARGOCD_PASSWORD=$(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d)
+echo "$ARGOCD_PASSWORD"
+
+echo "======================================"
+echo "Waiting for Traefik to be ready and port-forwarding to localhost"
+echo "======================================"
+# Kill any existing port-forward that might be using 443
+pkill -f "kubectl port-forward.*traefik.*443" || true
+
+# Forward local 443 to Traefik service (available on port 443 inside the cluster)
+kubectl port-forward -n kube-system service/traefik 443:443 > /dev/null 2>&1 &
+
+echo "Port-forward started (background)."
+
+echo "======================================"
+echo "Hosts file configuration"
+echo "======================================"
+NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
+echo "Add these lines to your /etc/hosts file (sudo required):"
+echo "$NODE_IP    $ARGOCD_HOST"
+echo "$NODE_IP    $FRAPPE_HOST"
+echo ""
+echo "After updating /etc/hosts, open https://$ARGOCD_HOST"
+echo "Login with username 'admin' and the password above."
+
+echo "======================================"
 echo "Bootstrapping cluster root app"
 echo "======================================"
 kubectl apply -f argocd/application.yaml
@@ -113,4 +137,5 @@ kubectl apply -f argocd/application.yaml
 echo "======================================"
 echo "Bootstrap complete"
 echo "======================================"
-echo "ArgoCD URL: https://${ARGOCD_HOST}"
+echo "ArgoCD URL: https://$ARGOCD_HOST"
+echo "Frappe will be available at https://$FRAPPE_HOST after ArgoCD syncs (may take a few minutes)."
