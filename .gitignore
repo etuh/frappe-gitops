@@ -6,3 +6,10 @@
 
 # Git local config
 .git/
+
+# Secrets (unencrypted)
+secrets.yaml
+*.pem
+
+# Some notes
+notes

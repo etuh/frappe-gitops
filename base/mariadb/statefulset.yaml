@@ -2,6 +2,8 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: mariadb
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
 spec:
   selector:
     matchLabels:
@@ -14,25 +16,25 @@ spec:
         app: mariadb
     spec:
       containers:
-      - name: mariadb
-        image: mariadb:10.6
-        env:
-        - name: MARIADB_ROOT_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: frappe-secrets
-              key: db-password
-        ports:
-        - containerPort: 3306
-          name: mysql
-        volumeMounts:
-        - name: mariadb-data
-          mountPath: /var/lib/mysql
+        - name: mariadb
+          image: mariadb:10.6
+          env:
+            - name: MARIADB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: frappe-secrets
+                  key: db-password
+          ports:
+            - containerPort: 3306
+              name: mysql
+          volumeMounts:
+            - name: mariadb-data
+              mountPath: /var/lib/mysql
   volumeClaimTemplates:
-  - metadata:
-      name: mariadb-data
-    spec:
-      accessModes: [ "ReadWriteOnce" ]
-      resources:
-        requests:
-          storage: 5Gi
+    - metadata:
+        name: mariadb-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi

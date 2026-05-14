@@ -2,6 +2,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: redis-queue
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
 spec:
   selector:
     matchLabels:
@@ -12,7 +14,7 @@ spec:
         app: redis-queue
     spec:
       containers:
-      - name: redis
-        image: redis:6.2-alpine
-        ports:
-        - containerPort: 6379
+        - name: redis
+          image: redis:6.2-alpine
+          ports:
+            - containerPort: 6379

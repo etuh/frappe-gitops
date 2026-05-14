@@ -3,8 +3,7 @@ kind: Job
 metadata:
   name: frappe-site-init
   annotations:
-    argocd.argoproj.io/hook: PreSync
-    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   template:
     spec:
@@ -20,6 +19,16 @@ spec:
           args:
             - |
               set -e
+
+              echo "Waiting for MariaDB..."
+
+              until nc -z mariadb 3306; do
+                echo "MariaDB not ready, waiting..."
+                sleep 5
+              done
+
+              echo "MariaDB is ready"
+
               cd /home/frappe/frappe-bench
               if [ ! -d "sites/${SITE_NAME}" ]; then
                 bench new-site ${SITE_NAME} \
@@ -27,7 +36,10 @@ spec:
                   --admin-password ${ADMIN_PASSWORD} \
                   --db-host ${DB_HOST}
               fi
-              bench --site ${SITE_NAME} migrate
+              if [ ! -f "/home/frappe/frappe-bench/sites/${SITE_NAME}/.initialized" ]; then
+                bench --site ${SITE_NAME} migrate
+                touch /home/frappe/frappe-bench/sites/${SITE_NAME}/.initialized
+              fi
           env:
             - name: SITE_NAME
               value: "frappe.dairyndumberi.local"
