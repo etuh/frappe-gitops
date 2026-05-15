@@ -12,3 +12,5 @@ secrets/**/secrets.yaml
 
 # Local sealing certificates
 secrets/*.pem
+
+argocd-linux-amd64

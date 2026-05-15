@@ -40,38 +40,22 @@ kubectl get nodes
 # Fix CoreDNS upstream resolvers
 #######################################
 
-echo "Waiting for CoreDNS..."
-
-kubectl rollout status deployment/coredns \
-  -n kube-system \
-  --timeout=300s
-
-echo "Patching CoreDNS..."
+echo "Configuring CoreDNS..."
 
 kubectl patch configmap coredns \
   -n kube-system \
   --type merge \
   -p '{
     "data": {
-      "Corefile": ".:53 {\n    errors\n    health\n    ready\n    kubernetes cluster.local in-addr.arpa ip6.arpa {\n      pods insecure\n      fallthrough in-addr.arpa ip6.arpa\n      ttl 30\n    }\n    prometheus :9153\n    forward . 8.8.8.8 1.1.1.1\n    cache 30\n    loop\n    reload\n    loadbalance\n}"
+      "Corefile": ".:53 {\n    errors\n    health\n    ready\n    kubernetes cluster.local in-addr.arpa ip6.arpa {\n      pods insecure\n      fallthrough in-addr.arpa ip6.arpa\n    }\n    prometheus :9153\n    forward . 8.8.8.8 1.1.1.1\n    cache 30\n    loop\n    reload\n    loadbalance\n}"
     }
   }'
 
-echo "Restarting CoreDNS..."
-
-kubectl rollout restart deployment/coredns -n kube-system
-
-kubectl rollout status deployment/coredns \
+kubectl rollout restart deployment \
   -n kube-system \
-  --timeout=300s
+  -l k8s-app=kube-dns
 
-echo "Testing DNS..."
-
-kubectl run dns-test \
-  --rm -i \
-  --restart=Never \
-  --image=busybox:1.36 \
-  -- nslookup github.com
+kubectl rollout status deployment/coredns -n kube-system --timeout=120s
 
 #######################################
 # Namespaces
