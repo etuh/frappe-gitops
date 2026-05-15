@@ -19,7 +19,6 @@ echo "Installing K3s..."
 curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="\
   --disable=servicelb \
   --write-kubeconfig-mode=600 \
-  --cluster-dns=8.8.8.8 \
   --cluster-domain=cluster.local" \
 sh -
 
@@ -36,6 +35,43 @@ chmod 600 ~/.kube/config
 export KUBECONFIG=~/.kube/config
 
 kubectl get nodes
+
+#######################################
+# Fix CoreDNS upstream resolvers
+#######################################
+
+echo "Waiting for CoreDNS..."
+
+kubectl rollout status deployment/coredns \
+  -n kube-system \
+  --timeout=300s
+
+echo "Patching CoreDNS..."
+
+kubectl patch configmap coredns \
+  -n kube-system \
+  --type merge \
+  -p '{
+    "data": {
+      "Corefile": ".:53 {\n    errors\n    health\n    ready\n    kubernetes cluster.local in-addr.arpa ip6.arpa {\n      pods insecure\n      fallthrough in-addr.arpa ip6.arpa\n      ttl 30\n    }\n    prometheus :9153\n    forward . 8.8.8.8 1.1.1.1\n    cache 30\n    loop\n    reload\n    loadbalance\n}"
+    }
+  }'
+
+echo "Restarting CoreDNS..."
+
+kubectl rollout restart deployment/coredns -n kube-system
+
+kubectl rollout status deployment/coredns \
+  -n kube-system \
+  --timeout=300s
+
+echo "Testing DNS..."
+
+kubectl run dns-test \
+  --rm -i \
+  --restart=Never \
+  --image=busybox:1.36 \
+  -- nslookup github.com
 
 #######################################
 # Namespaces
