@@ -14,6 +14,14 @@ if [ ! -f "$SEALED_SECRET" ]; then
   exit 1
 fi
 
+mkdir -p ~/.kube
+
+sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
+sudo chown "$USER":"$USER" ~/.kube/config
+chmod 600 ~/.kube/config
+
+export KUBECONFIG=~/.kube/config
+
 echo "Bootstrapping ArgoCD..."
 
 kubectl apply -f "${REPO_ROOT}/argocd/application.yaml"

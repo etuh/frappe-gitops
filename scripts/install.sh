@@ -96,3 +96,4 @@ kubectl rollout status deployment/sealed-secrets-controller \
 echo ""
 echo "Platform install complete."
 echo "Next: run ./scripts/make_secrets.sh"
+echo "Finally: run ./scripts/bootstrap.sh"
