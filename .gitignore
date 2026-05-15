@@ -1,15 +1,14 @@
 # Environment dependencies
 .env
 
-# MacOS / OS specific
+# macOS / OS files
 .DS_Store
 
-# Git local config
-.git/
-
-# Secrets (unencrypted)
-secrets.yaml
-*.pem
-
-# Some notes
+# Local notes
 notes
+
+# Plaintext secrets
+secrets/**/secrets.yaml
+
+# Local sealing certificates
+secrets/*.pem
