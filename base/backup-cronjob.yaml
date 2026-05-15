@@ -13,7 +13,7 @@ spec:
           restartPolicy: OnFailure
           containers:
             - name: backup
-              image: image: ghcr.io/etuh/frappe:2026-05-08
+              image: ghcr.io/etuh/frappe:2026-05-08
               command: ["/home/frappe/frappe-bench/env/bin/bench"]
               args: ["--site", "$(SITE_NAME)", "backup", "--with-files"]
               env:
