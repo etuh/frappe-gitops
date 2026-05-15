@@ -14,6 +14,9 @@ if [ ! -f "$SEALED_SECRET" ]; then
   exit 1
 fi
 
+cd "$(dirname "$0")/.." || exit 1
+cp -v secrets/production/secrets.encrypted.yaml overlays/production/secrets.encrypted.yaml
+
 mkdir -p ~/.kube
 
 sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
