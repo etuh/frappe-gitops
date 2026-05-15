@@ -40,7 +40,20 @@ kubectl get nodes
 # Fix CoreDNS upstream resolvers
 #######################################
 
-echo "Configuring CoreDNS..."
+echo "Waiting for CoreDNS..."
+
+kubectl wait \
+  --for=condition=Ready \
+  pod \
+  -n kube-system \
+  -l k8s-app=kube-dns \
+  --timeout=180s
+
+until kubectl get configmap coredns -n kube-system >/dev/null 2>&1; do
+  sleep 2
+done
+
+echo "Patching CoreDNS..."
 
 kubectl patch configmap coredns \
   -n kube-system \
@@ -51,11 +64,8 @@ kubectl patch configmap coredns \
     }
   }'
 
-kubectl rollout restart deployment \
-  -n kube-system \
-  -l k8s-app=kube-dns
-
-kubectl rollout status deployment/coredns -n kube-system --timeout=120s
+kubectl rollout restart deployment/coredns -n kube-system
+kubectl rollout status deployment/coredns -n kube-system --timeout=180s
 
 #######################################
 # Namespaces
