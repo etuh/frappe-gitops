@@ -18,7 +18,9 @@ echo "Installing K3s..."
 
 curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="\
   --disable=servicelb \
-  --write-kubeconfig-mode=600" \
+  --write-kubeconfig-mode=600 \
+  --cluster-dns=10.43.0.10 \
+  --cluster-domain=cluster.local" \
 sh -
 
 #######################################
