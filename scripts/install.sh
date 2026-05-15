@@ -42,11 +42,12 @@ kubectl get nodes
 
 echo "Waiting for CoreDNS..."
 
-kubectl wait \
-  --for=condition=Ready \
-  pod \
+until kubectl get deployment coredns -n kube-system >/dev/null 2>&1; do
+  sleep 2
+done
+
+kubectl rollout status deployment/coredns \
   -n kube-system \
-  -l k8s-app=kube-dns \
   --timeout=180s
 
 until kubectl get configmap coredns -n kube-system >/dev/null 2>&1; do
