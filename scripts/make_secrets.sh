@@ -19,6 +19,23 @@ PLAIN_SECRET="${REPO_ROOT}/secrets/production/secrets.yaml"
 SEALED_SECRET="${REPO_ROOT}/secrets/production/secrets.encrypted.yaml"
 
 #######################################
+# Install kubeseal if missing
+#######################################
+
+if ! command -v kubeseal >/dev/null 2>&1; then
+  echo "kubeseal CLI not found. Installing..."
+  # Keeping this version in sync with install.sh
+  KUBESEAL_VERSION="v0.26.0"
+  
+  curl -sL "https://github.com/bitnami-labs/sealed-secrets/releases/download/${KUBESEAL_VERSION}/kubeseal-${KUBESEAL_VERSION#v}-linux-amd64.tar.gz" | tar xz kubeseal
+  sudo install -m 755 kubeseal /usr/local/bin/kubeseal
+  rm kubeseal
+  
+  echo "kubeseal installed successfully."
+  echo ""
+fi
+
+#######################################
 # Validate input or Prompt
 #######################################
 
