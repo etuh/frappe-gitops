@@ -17,7 +17,6 @@ SEALED_SECRETS_VERSION="v0.26.0"
 echo "Installing K3s..."
 
 curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="\
-  --disable=servicelb \
   --write-kubeconfig-mode=600 \
   --cluster-domain=cluster.local" \
 sh -
