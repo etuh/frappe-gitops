@@ -4,15 +4,9 @@ metadata:
   name: argocd-server
   namespace: argocd
   annotations:
-    cert-manager.io/cluster-issuer: local-selfsigned
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
-    traefik.ingress.kubernetes.io/router.tls: "true"
 spec:
   ingressClassName: traefik
-  tls:
-    - hosts:
-        - argocd.dairyndumberi.local
-      secretName: argocd-tls
   rules:
     - host: argocd.dairyndumberi.local
       http:
@@ -23,4 +17,4 @@ spec:
               service:
                 name: argocd-server
                 port:
-                  number: 443
+                  number: 80
