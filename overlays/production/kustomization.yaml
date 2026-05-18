@@ -3,7 +3,7 @@ kind: Kustomization
 
 resources:
   - ../../base
-  - ../../secrets/production/secrets.encrypted.yaml
+  - ./secrets.encrypted.yaml
 
 patches:
   - path: patch-replicas.yaml
