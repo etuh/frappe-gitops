@@ -19,13 +19,34 @@ PLAIN_SECRET="${REPO_ROOT}/secrets/production/secrets.yaml"
 SEALED_SECRET="${REPO_ROOT}/secrets/production/secrets.encrypted.yaml"
 
 #######################################
-# Validate input
+# Validate input or Prompt
 #######################################
 
 if [ ! -f "$PLAIN_SECRET" ]; then
-  echo "Missing plaintext secret:"
-  echo "$PLAIN_SECRET"
-  exit 1
+  echo "Missing plaintext secret at $PLAIN_SECRET"
+  echo "Creating one now..."
+  
+  read -s -p "Enter Database root password: " DB_PASS
+  echo ""
+  read -s -p "Enter Frappe Administrator password: " ADMIN_PASS
+  echo ""
+  
+  mkdir -p "$(dirname "$PLAIN_SECRET")"
+  
+  cat <<EOF > "$PLAIN_SECRET"
+apiVersion: v1
+kind: Secret
+metadata:
+  name: frappe-secrets
+  namespace: frappe
+type: Opaque
+stringData:
+  db-password: "${DB_PASS}"
+  admin-password: "${ADMIN_PASS}"
+EOF
+
+  echo "Plaintext secret file created at $PLAIN_SECRET."
+  echo "WARNING: Don't commit the plaintext file!"
 fi
 
 #######################################
@@ -36,7 +57,8 @@ if [ ! -f "$CERT_FILE" ]; then
   echo "Sealed Secrets certificate not found."
   echo "Fetching cluster certificate..."
 
-  kubeseal --fetch-cert > "$CERT_FILE"
+  # Note: Adjust the controller name and namespace based on your installation if necessary.
+  kubeseal --fetch-cert --controller-name sealed-secrets-controller --controller-namespace kube-system > "$CERT_FILE"
 
   echo "Saved certificate:"
   echo "$CERT_FILE"
