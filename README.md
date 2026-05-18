@@ -9,6 +9,7 @@ It includes:
 - Automated GitOps deployments
 - Secret encryption using Sealed Secrets
 - Automated cluster bootstrapping using K3s
+- Local NFS server and storage provisioner for Frappe sites persistence
 
 ---
 
@@ -43,10 +44,29 @@ This deployment consists of the following layers:
 - Kustomize
 - Sealed Secrets
 - K3s
+- NFS Subdir External Provisioner
 
 ---
 
-# 📁 Repository Structure
+# �️ Firewall & Ports
+
+When provisioning your VM or server, ensure the following ports are open in your firewall or security group:
+
+### Essential Ports
+
+- **`80` (HTTP / TCP):** Handles standard web traffic and TLS redirects via Traefik.
+- **`443` (HTTPS / TCP):** Serves encrypted traffic for your Frappe applications and ArgoCD dashboard.
+- **`22` (SSH / TCP):** Required for remote server management and to run installation scripts.
+
+### Optional Ports
+
+- **`6443` (Kubernetes API / TCP):** Expose only if you want to use `kubectl` or `kubeseal` directly from your local machine. If kept closed, you must manage the cluster via SSH.
+
+All internal services (MariaDB `3306`, Redis `6379`, Frappe backend `8000`) communicate securely within the K3s virtual network and do **not** need external exposure.
+
+---
+
+# �📁 Repository Structure
 
 ```text
 .
@@ -153,8 +173,15 @@ This installs:
 - ArgoCD
 - cert-manager
 - Sealed Secrets Controller
+- Local NFS Server & Provisioner (creates the `nfs-client` StorageClass, providing `ReadWriteMany` shared storage for Frappe sites)
 
 This script does **not** deploy Frappe yet.
+
+**To get your initial ArgoCD admin password, run:**
+
+```bash
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+```
 
 ---
 
