@@ -27,6 +27,7 @@ export KUBECONFIG=~/.kube/config
 
 echo "Bootstrapping ArgoCD..."
 
+kubectl apply -f "${REPO_ROOT}/argocd/ingress.yaml"
 kubectl apply -f "${REPO_ROOT}/argocd/application.yaml"
 
 echo ""
