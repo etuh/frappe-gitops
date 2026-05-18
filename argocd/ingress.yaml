@@ -4,12 +4,11 @@ metadata:
   name: argocd-server
   namespace: argocd
   annotations:
-    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.entrypoints: web
 spec:
   ingressClassName: traefik
   rules:
-    - host: argocd.dairyndumberi.local
-      http:
+    - http:
         paths:
           - path: /
             pathType: Prefix
