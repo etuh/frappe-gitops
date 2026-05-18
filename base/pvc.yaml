@@ -5,7 +5,7 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "0"
 spec:
-  storageClassName: rwx-storage-class
+  storageClassName: nfs-client
   accessModes:
     - ReadWriteMany
   resources:

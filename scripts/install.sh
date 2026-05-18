@@ -37,6 +37,51 @@ export KUBECONFIG=~/.kube/config
 kubectl get nodes
 
 #######################################
+# Install NFS Server and Provisioner
+#######################################
+
+echo "Installing NFS server..."
+sudo apt update
+sudo apt install -y nfs-kernel-server curl
+
+echo "Creating NFS export..."
+sudo mkdir -p /srv/nfs/frappe
+sudo chown nobody:nogroup /srv/nfs/frappe
+sudo chmod 777 /srv/nfs/frappe
+
+# Add export if it doesn't exist
+grep -qxF '/srv/nfs/frappe *(rw,sync,no_subtree_check,no_root_squash)' /etc/exports || \
+echo '/srv/nfs/frappe *(rw,sync,no_subtree_check,no_root_squash)' | sudo tee -a /etc/exports
+
+sudo exportfs -ra
+sudo systemctl enable nfs-kernel-server
+sudo systemctl restart nfs-kernel-server
+
+echo "Installing Helm if missing..."
+if ! command -v helm >/dev/null 2>&1; then
+  curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+fi
+
+echo "Installing NFS provisioner..."
+
+SERVER_IP=$(hostname -I | awk '{print $1}')
+
+kubectl create namespace nfs-storage --dry-run=client -o yaml | kubectl apply -f -
+
+helm repo add nfs-subdir-external-provisioner https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner || true
+helm repo update
+
+helm upgrade --install nfs-storage \
+  nfs-subdir-external-provisioner/nfs-subdir-external-provisioner \
+  -n nfs-storage \
+  --set nfs.server=$SERVER_IP \
+  --set nfs.path=/srv/nfs/frappe \
+  --set storageClass.name=nfs-client
+
+echo "Done. Available storage classes:"
+kubectl get storageclass
+
+#######################################
 # Fix CoreDNS upstream resolvers
 #######################################
 
