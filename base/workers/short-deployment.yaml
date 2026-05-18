@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: worker
-          image: custom-frappe:v16.17.0
+          image: ghcr.io/etuh/frappe:2026-05-08
           command: ["/home/frappe/frappe-bench/env/bin/bench"]
           args: ["--site", "$(SITE_NAME)", "worker", "--queue", "short"]
           env:
