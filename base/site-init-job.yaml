@@ -31,6 +31,10 @@ spec:
               echo "MariaDB is ready"
 
               cd /home/frappe/frappe-bench
+              if [ ! -f "sites/apps.txt" ]; then
+                find apps -mindepth 1 -maxdepth 1 -type d -exec basename {} \; > sites/apps.txt
+              fi
+
               if [ ! -d "sites/${SITE_NAME}" ]; then
                 bench new-site ${SITE_NAME} \
                   --mariadb-root-password ${DB_PASSWORD} \
