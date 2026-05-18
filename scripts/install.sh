@@ -129,6 +129,10 @@ kubectl apply --server-side --force-conflicts \
   -n argocd \
   -f "https://raw.githubusercontent.com/argoproj/argo-cd/${ARGOCD_VERSION}/manifests/install.yaml"
 
+echo "Configuring ArgoCD to serve UI over HTTP (disabling internal TLS)..."
+kubectl patch configmap argocd-cmd-params-cm -n argocd --type merge -p '{"data":{"server.insecure":"true"}}'
+kubectl rollout restart deployment/argocd-server -n argocd
+
 kubectl rollout status deployment/argocd-server \
   -n argocd \
   --timeout=300s
