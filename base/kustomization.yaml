@@ -3,6 +3,7 @@ kind: Kustomization
 namespace: frappe
 
 resources:
+  - clusterissuer.yaml
   - namespace.yaml
   - pvc.yaml
   - site-init-job.yaml
