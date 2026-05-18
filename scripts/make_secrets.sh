@@ -59,3 +59,5 @@ echo "Created:"
 echo "$SEALED_SECRET"
 echo ""
 echo "Commit only the encrypted file to Git."
+
+cp -v secrets/production/secrets.encrypted.yaml overlays/production/secrets.encrypted.yaml
