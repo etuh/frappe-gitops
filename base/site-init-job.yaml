@@ -22,7 +22,8 @@ spec:
 
               echo "Waiting for MariaDB..."
 
-              until nc -z mariadb 3306; do
+              # Use bash built-in tcp testing to avoid depending on 'nc'
+              until (echo > /dev/tcp/mariadb/3306) >/dev/null 2>&1; do
                 echo "MariaDB not ready, waiting..."
                 sleep 5
               done

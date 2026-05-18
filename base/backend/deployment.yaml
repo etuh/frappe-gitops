@@ -35,9 +35,7 @@ spec:
             - sh
             - -c
             - |
-              until nc -z mariadb 3306; do sleep 2; done
-              until nc -z redis-cache 6379; do sleep 2; done
-              until nc -z redis-queue 6379; do sleep 2; done
+              sleep 10
               cat > /home/frappe/frappe-bench/sites/common_site_config.json <<INNEREOF
               {
                 "db_host": "${DB_HOST}",
