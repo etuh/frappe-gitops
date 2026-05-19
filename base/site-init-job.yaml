@@ -36,7 +36,25 @@ spec:
               fi
 
               if [ ! -d "sites/${SITE_NAME}" ]; then
+                INSTALL_SITE=true
+              else
+                # Check if database is accessible
+                set +e
+                python3 -c "import frappe; frappe.init('${SITE_NAME}'); frappe.connect()" > /dev/null 2>&1
+                DB_STATUS=$?
+                set -e
+                
+                if [ $DB_STATUS -ne 0 ]; then
+                  echo "Database connection failed. Database might be missing. Forcing site recreation..."
+                  INSTALL_SITE=true
+                else
+                  INSTALL_SITE=false
+                fi
+              fi
+
+              if [ "$INSTALL_SITE" = true ]; then
                 bench new-site ${SITE_NAME} \
+                  --force \
                   --mariadb-root-password ${DB_PASSWORD} \
                   --admin-password ${ADMIN_PASSWORD} \
                   --db-host ${DB_HOST}
