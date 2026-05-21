@@ -61,6 +61,10 @@ spec:
                   --mariadb-root-password ${DB_PASSWORD} \
                   --admin-password ${ADMIN_PASSWORD} \
                   --db-host ${DB_HOST}
+                
+                # Fix MariaDB user host restriction
+                DB_USER=$(cat sites/${SITE_NAME}/site_config.json | grep db_name | cut -d '"' -f 4)
+                mysql -u root -p${DB_PASSWORD} -h ${DB_HOST} -e "UPDATE mysql.user SET Host = '%' WHERE User = '${DB_USER}'; FLUSH PRIVILEGES;"
               fi
               if [ ! -f "/home/frappe/frappe-bench/sites/${SITE_NAME}/.initialized" ]; then
                 bench --site ${SITE_NAME} migrate
