@@ -19,7 +19,7 @@ spec:
       containers:
         - name: worker
           image: ghcr.io/etuh/frappe:2026-05-08
-          command: ["/home/frappe/frappe-bench/env/bin/bench"]
+          command: ["bench"]
           args: ["--site", "$(SITE_NAME)", "worker", "--queue", "long"]
           env:
             - name: SITE_NAME

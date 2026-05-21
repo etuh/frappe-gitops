@@ -19,7 +19,7 @@ spec:
       containers:
         - name: scheduler
           image: ghcr.io/etuh/frappe:2026-05-08
-          command: ["/home/frappe/frappe-bench/env/bin/bench"]
+          command: ["bench"]
           args: ["--site", "$(SITE_NAME)", "schedule"]
           env:
             - name: SITE_NAME
