@@ -37,8 +37,11 @@ spec:
               subPath: common_site_config.json
           livenessProbe:
             httpGet:
-              path: /health
+              path: /api/method/frappe.ping
               port: 8000
+              httpHeaders:
+                - name: Host
+                  value: "frappe.dairyndumberi.local"
             initialDelaySeconds: 60
             periodSeconds: 10
             timeoutSeconds: 5
