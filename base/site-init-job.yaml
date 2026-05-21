@@ -41,16 +41,20 @@ spec:
               if [ ! -d "sites/${SITE_NAME}" ]; then
                 INSTALL_SITE=true
               else
-                # Check if database is accessible
+                # Safely check if database exists using root access, avoiding dangerous wipe on IP changes
+                DB_USER=$(cat sites/${SITE_NAME}/site_config.json | grep db_name | cut -d '"' -f 4)
+                SITE_DB_PASS=$(cat sites/${SITE_NAME}/site_config.json | grep db_password | cut -d '"' -f 4)
+                
                 set +e
-                python3 -c "import frappe; frappe.init('${SITE_NAME}'); frappe.connect()" > /dev/null 2>&1
-                DB_STATUS=$?
+                DB_EXISTS=$(mysql -u root -p${DB_PASSWORD} -h ${DB_HOST} -e "SHOW DATABASES LIKE '${DB_USER}';" | grep "${DB_USER}")
                 set -e
                 
-                if [ $DB_STATUS -ne 0 ]; then
-                  echo "Database connection failed. Database might be missing. Forcing site recreation..."
+                if [ -z "$DB_EXISTS" ]; then
+                  echo "Database missing. Forcing site recreation..."
                   INSTALL_SITE=true
                 else
+                  echo "Database exists. Ensuring global (%) access for the user..."
+                  mysql -u root -p${DB_PASSWORD} -h ${DB_HOST} -e "CREATE USER IF NOT EXISTS '${DB_USER}'@'%' IDENTIFIED BY '${SITE_DB_PASS}'; GRANT ALL PRIVILEGES ON \`${DB_USER}\`.* TO '${DB_USER}'@'%'; FLUSH PRIVILEGES;"
                   INSTALL_SITE=false
                 fi
               fi
@@ -62,9 +66,10 @@ spec:
                   --admin-password ${ADMIN_PASSWORD} \
                   --db-host ${DB_HOST}
                 
-                # Fix MariaDB user host restriction
+                # Fix MariaDB user host restriction by explicitly creating and granting privileges to the user from any host (%)
                 DB_USER=$(cat sites/${SITE_NAME}/site_config.json | grep db_name | cut -d '"' -f 4)
-                mysql -u root -p${DB_PASSWORD} -h ${DB_HOST} -e "UPDATE mysql.user SET Host = '%' WHERE User = '${DB_USER}'; FLUSH PRIVILEGES;"
+                SITE_DB_PASS=$(cat sites/${SITE_NAME}/site_config.json | grep db_password | cut -d '"' -f 4)
+                mysql -u root -p${DB_PASSWORD} -h ${DB_HOST} -e "CREATE USER IF NOT EXISTS '${DB_USER}'@'%' IDENTIFIED BY '${SITE_DB_PASS}'; GRANT ALL PRIVILEGES ON \`${DB_USER}\`.* TO '${DB_USER}'@'%'; FLUSH PRIVILEGES;"
               fi
               if [ ! -f "/home/frappe/frappe-bench/sites/${SITE_NAME}/.initialized" ]; then
                 bench --site ${SITE_NAME} migrate
