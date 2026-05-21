@@ -12,6 +12,9 @@ spec:
         - name: sites
           persistentVolumeClaim:
             claimName: frappe-sites
+        - name: site-config
+          configMap:
+            name: common-site-config
       containers:
         - name: init
           image: ghcr.io/etuh/frappe:2026-05-08
@@ -81,3 +84,6 @@ spec:
           volumeMounts:
             - name: sites
               mountPath: /home/frappe/frappe-bench/sites
+            - name: site-config
+              mountPath: /home/frappe/frappe-bench/sites/common_site_config.json
+              subPath: common_site_config.json

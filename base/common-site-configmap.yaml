@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: common-site-config
+data:
+  common_site_config.json: |
+    {
+      "db_host": "mariadb",
+      "db_port": "3306",
+      "redis_cache": "redis://redis-cache:6379",
+      "redis_queue": "redis://redis-queue:6379",
+      "redis_socketio": "redis://redis-queue:6379",
+      "socketio_port": 9000,
+      "webserver_port": 8000
+    }

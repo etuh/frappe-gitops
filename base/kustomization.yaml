@@ -6,6 +6,7 @@ resources:
   - clusterissuer.yaml
   - namespace.yaml
   - pvc.yaml
+  - common-site-configmap.yaml
   - site-init-job.yaml
   - backup-cronjob.yaml
   - mariadb/statefulset.yaml
