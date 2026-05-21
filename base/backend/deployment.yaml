@@ -41,6 +41,7 @@ spec:
               port: 8000
             initialDelaySeconds: 60
             periodSeconds: 10
+            timeoutSeconds: 5
           readinessProbe:
             httpGet:
               path: /api/method/frappe.ping
@@ -50,6 +51,7 @@ spec:
                   value: "frappe.dairyndumberi.local"
             initialDelaySeconds: 10
             periodSeconds: 5
+            timeoutSeconds: 5
       volumes:
         - name: sites
           persistentVolumeClaim:
