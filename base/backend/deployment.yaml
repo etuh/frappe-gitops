@@ -45,6 +45,9 @@ spec:
             httpGet:
               path: /api/method/frappe.ping
               port: 8000
+              httpHeaders:
+                - name: Host
+                  value: "frappe.dairyndumberi.local"
             initialDelaySeconds: 10
             periodSeconds: 5
       volumes:
