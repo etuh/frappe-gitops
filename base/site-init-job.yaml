@@ -36,6 +36,7 @@ spec:
               cd /home/frappe/frappe-bench
 
               echo "Copying assets to shared sites volume..."
+              apt update && apt install rsync -y
               rsync -a --delete --info=progress2 --stats /home/frappe/frappe-bench/assets/ /home/frappe/frappe-bench/sites/assets/
 
               if [ ! -f "sites/apps.txt" ]; then
