@@ -36,7 +36,7 @@ spec:
               cd /home/frappe/frappe-bench
 
               echo "Copying assets to shared sites volume..."
-              cp -aL /home/frappe/frappe-bench/assets/. /home/frappe/frappe-bench/sites/assets/
+              rsync -a --delete --info=progress2 --stats /home/frappe/frappe-bench/assets/ /home/frappe/frappe-bench/sites/assets/
 
               if [ ! -f "sites/apps.txt" ]; then
                 find apps -mindepth 1 -maxdepth 1 -type d -exec basename {} \; > sites/apps.txt
