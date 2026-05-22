@@ -74,6 +74,9 @@ spec:
                 DB_USER=$(cat sites/${SITE_NAME}/site_config.json | grep db_name | cut -d '"' -f 4)
                 SITE_DB_PASS=$(cat sites/${SITE_NAME}/site_config.json | grep db_password | cut -d '"' -f 4)
                 mysql -u root -p${DB_PASSWORD} -h ${DB_HOST} -e "CREATE USER IF NOT EXISTS '${DB_USER}'@'%' IDENTIFIED BY '${SITE_DB_PASS}'; GRANT ALL PRIVILEGES ON \`${DB_USER}\`.* TO '${DB_USER}'@'%'; FLUSH PRIVILEGES;"
+
+                bench --site ${SITE_NAME} install-app erpnext
+                bench --site ${SITE_NAME} install-app hrms
               fi
               if [ ! -f "/home/frappe/frappe-bench/sites/${SITE_NAME}/.initialized" ]; then
                 bench --site ${SITE_NAME} migrate
