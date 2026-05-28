@@ -9,11 +9,11 @@ metadata:
     traefik.ingress.kubernetes.io/router.tls: "true"
 spec:
   tls:
-    - # hosts:
-      #   - frappe.dairyndumberi.local
+    - hosts:
+        - frappe.dairyndumberi.local
       secretName: frappe-tls
   rules:
-    - # host: frappe.dairyndumberi.local
+    - host: frappe.dairyndumberi.local
       http:
         paths:
           - path: /
