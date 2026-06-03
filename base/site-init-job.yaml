@@ -43,11 +43,11 @@ spec:
                 cp sites/apps.txt apps.txt
               fi
 
-              # Generate assets directly into the shared sites/assets volume
-              echo "Building Frappe assets directly to volume..."
-              bench build
+              # Copy pre-compiled assets from the image into the shared sites/assets volume
+              echo "Copying pre-built Frappe assets to volume..."
+              mkdir -p /home/frappe/frappe-bench/sites/assets
+              cp -a /home/frappe/frappe-bench/assets/. /home/frappe/frappe-bench/sites/assets/
 
-              # REMOVED: cp -a /home/frappe/frappe-bench/assets/. /home/frappe/frappe-bench/sites/assets/
 
               if [ ! -d "sites/${SITE_NAME}" ]; then
                 INSTALL_SITE=true
