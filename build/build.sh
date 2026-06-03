@@ -16,6 +16,7 @@ GITHUB_USERNAME="${GITHUB_USERNAME:-etuh}"
 FRAPPE_VERSION="v16.17.0"
 ERPNEXT_VERSION="v16.17.0"
 HRMS_VERSION="v16.6.1"
+SLADE_VERSION="v16.3.1"
 
 BUILD_DATE=$(date +%F)
 
@@ -41,6 +42,10 @@ APPS_JSON_BASE64=$(cat << APPS_JSON_EOF | base64 -w 0
   {
     "url": "https://github.com/frappe/hrms",
     "branch": "${HRMS_VERSION}"
+  },
+  {
+    "url": "https://github.com/navariltd/kenya-compliance-via-slade.git",
+    "branch": "${SLADE_VERSION}"
   }
 ]
 APPS_JSON_EOF
@@ -65,9 +70,15 @@ podman build \
 # LOGIN TO GHCR & PUSH
 # ============================================
 if [ -z "${GITHUB_TOKEN:-}" ]; then
-  echo "⚠️ GITHUB_TOKEN is not set in the environment or .env file. Skipping GHCR login and push."
-  echo "Image was built locally as ${FULL_IMAGE_NAME}."
-  exit 0
+  echo "⚠️ GITHUB_TOKEN is not set in the environment or .env file."
+  read -s -p "Please enter your GitHub Token: " GITHUB_TOKEN
+  echo "" # Print a newline after silent input
+  
+  if [ -z "${GITHUB_TOKEN:-}" ]; then
+    echo "No token provided. Skipping GHCR login and push."
+    echo "Image was built locally as ${FULL_IMAGE_NAME}."
+    exit 0
+  fi
 fi
 
 echo "Logging into GHCR..."

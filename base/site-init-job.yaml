@@ -77,6 +77,7 @@ spec:
 
                 bench --site ${SITE_NAME} install-app erpnext
                 bench --site ${SITE_NAME} install-app hrms
+                bench --site ${SITE_NAME} install-app kenya_compliance_via_slade
               fi
               if [ ! -f "/home/frappe/frappe-bench/sites/${SITE_NAME}/.initialized" ]; then
                 bench --site ${SITE_NAME} migrate
