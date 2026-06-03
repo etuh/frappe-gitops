@@ -27,7 +27,7 @@ IMAGE_TAG="${BUILD_DATE}"
 FULL_IMAGE_NAME="ghcr.io/${GITHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG}"
 
 # Ensure we use upstream's prefix if specified (or just let the Dockerfile use 'frappe')
-FRAPPE_IMAGE_PREFIX="frappe"
+FRAPPE_IMAGE_PREFIX="ghcr.io/frappe"
 
 # ============================================
 # CREATE apps.json (Base64 for build arg)
