@@ -25,6 +25,7 @@ IMAGE_TAG="${BUILD_DATE}"
 
 # Custom full image name pointing to GHCR
 FULL_IMAGE_NAME="ghcr.io/${GITHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG}"
+LATEST_IMAGE_NAME="ghcr.io/${GITHUB_USERNAME}/${IMAGE_NAME}:latest"
 
 # Ensure we use upstream's prefix if specified (or just let the Dockerfile use 'frappe')
 FRAPPE_IMAGE_PREFIX="ghcr.io/frappe"
@@ -63,6 +64,7 @@ podman build \
   --build-arg FRAPPE_IMAGE_PREFIX=${FRAPPE_IMAGE_PREFIX} \
   --build-arg APPS_JSON_BASE64=${APPS_JSON_BASE64} \
   --tag ${FULL_IMAGE_NAME} \
+  --tag ${LATEST_IMAGE_NAME} \
   --file build/Containerfile \
   .
 
@@ -88,10 +90,12 @@ echo "${GITHUB_TOKEN}" | podman login ghcr.io \
 
 echo "Pushing image to GHCR..."
 podman push ${FULL_IMAGE_NAME}
+podman push ${LATEST_IMAGE_NAME}
 
 echo ""
 echo "========================================"
 echo "SUCCESS!"
 echo "Image pushed:"
 echo "${FULL_IMAGE_NAME}"
+echo "${LATEST_IMAGE_NAME}"
 echo "========================================"
