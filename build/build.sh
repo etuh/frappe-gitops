@@ -53,6 +53,16 @@ APPS_JSON_EOF
 )
 
 # ============================================
+# FETCH RESOURCES FROM FRAPPE DOCKER
+# ============================================
+echo "Fetching resources from frappe_docker..."
+if [ ! -d "resources" ]; then
+  git clone --depth 1 https://github.com/frappe/frappe_docker.git /tmp/frappe_docker
+  cp -r /tmp/frappe_docker/resources .
+  rm -rf /tmp/frappe_docker
+fi
+
+# ============================================
 # BUILD IMAGE
 # ============================================
 echo "Building image ${FULL_IMAGE_NAME}..."

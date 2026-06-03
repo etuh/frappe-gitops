@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: ghcr.io/etuh/frappe:2026-05-08
+          image: ghcr.io/etuh/frappe:latest
           command: ["/home/frappe/frappe-bench/env/bin/gunicorn"]
           args:
             - "--chdir=/home/frappe/frappe-bench/sites"

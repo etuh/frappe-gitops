@@ -17,7 +17,7 @@ spec:
             name: common-site-config
       containers:
         - name: init
-          image: ghcr.io/etuh/frappe:2026-05-08
+          image: ghcr.io/etuh/frappe:latest
           command: ["/bin/bash", "-c"]
           args:
             - |
