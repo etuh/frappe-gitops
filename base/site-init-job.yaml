@@ -57,7 +57,7 @@ spec:
                 SITE_DB_PASS=$(cat sites/${SITE_NAME}/site_config.json | grep db_password | cut -d '"' -f 4)
                 
                 set +e
-                DB_EXISTS=$(mysql -u root -p"${DB_PASSWORD}" -h "${DB_HOST}" -e "SHOW DATABASES LIKE '${DB_USER}';" | grep "${DB_USER}")
+                DB_EXISTS=$(mysql -u root -p${DB_PASSWORD} -h ${DB_HOST} -e "SHOW DATABASES LIKE '${DB_USER}';" | grep "${DB_USER}")
                 set -e
                 
                 if [ -z "$DB_EXISTS" ]; then
@@ -65,28 +65,28 @@ spec:
                   INSTALL_SITE=true
                 else
                   echo "Database exists. Ensuring global (%) access for the user..."
-                  mysql -u root -p"${DB_PASSWORD}" -h "${DB_HOST}" -e "CREATE USER IF NOT EXISTS '${DB_USER}'@'%' IDENTIFIED BY '${SITE_DB_PASS}'; GRANT ALL PRIVILEGES ON \`${DB_USER}\`.* TO '${DB_USER}'@'%'; FLUSH PRIVILEGES;"
+                  mysql -u root -p${DB_PASSWORD} -h ${DB_HOST} -e "CREATE USER IF NOT EXISTS '${DB_USER}'@'%' IDENTIFIED BY '${SITE_DB_PASS}'; GRANT ALL PRIVILEGES ON \`${DB_USER}\`.* TO '${DB_USER}'@'%'; FLUSH PRIVILEGES;"
                   INSTALL_SITE=false
                 fi
               fi
 
               if [ "$INSTALL_SITE" = true ]; then
-                bench new-site "${SITE_NAME}" \
+                bench new-site ${SITE_NAME} \
                   --force \
-                  --mariadb-root-password "${DB_PASSWORD}" \
-                  --admin-password "${ADMIN_PASSWORD}" \
-                  --db-host "${DB_HOST}"
+                  --mariadb-root-password ${DB_PASSWORD} \
+                  --admin-password ${ADMIN_PASSWORD} \
+                  --db-host ${DB_HOST}
                 
                 # Fix MariaDB user host restriction by explicitly creating and granting privileges to the user from any host (%)
                 DB_USER=$(cat sites/${SITE_NAME}/site_config.json | grep db_name | cut -d '"' -f 4)
                 SITE_DB_PASS=$(cat sites/${SITE_NAME}/site_config.json | grep db_password | cut -d '"' -f 4)
-                mysql -u root -p"${DB_PASSWORD}" -h "${DB_HOST}" -e "CREATE USER IF NOT EXISTS '${DB_USER}'@'%' IDENTIFIED BY '${SITE_DB_PASS}'; GRANT ALL PRIVILEGES ON \`${DB_USER}\`.* TO '${DB_USER}'@'%'; FLUSH PRIVILEGES;"
+                mysql -u root -p${DB_PASSWORD} -h ${DB_HOST} -e "CREATE USER IF NOT EXISTS '${DB_USER}'@'%' IDENTIFIED BY '${SITE_DB_PASS}'; GRANT ALL PRIVILEGES ON \`${DB_USER}\`.* TO '${DB_USER}'@'%'; FLUSH PRIVILEGES;"
 
-                bench --site "${SITE_NAME}" install-app erpnext
-                bench --site "${SITE_NAME}" install-app hrms
+                bench --site ${SITE_NAME} install-app erpnext
+                bench --site ${SITE_NAME} install-app hrms
               fi
               if [ ! -f "/home/frappe/frappe-bench/sites/${SITE_NAME}/.initialized" ]; then
-                bench --site "${SITE_NAME}" migrate
+                bench --site ${SITE_NAME} migrate
                 touch /home/frappe/frappe-bench/sites/${SITE_NAME}/.initialized
               fi
           env:
