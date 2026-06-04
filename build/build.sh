@@ -31,10 +31,10 @@ LATEST_IMAGE_NAME="ghcr.io/${GITHUB_USERNAME}/${IMAGE_NAME}:latest"
 FRAPPE_IMAGE_PREFIX="ghcr.io/frappe"
 
 # ============================================
-# CREATE apps.json (Base64 for build arg)
+# CREATE apps.json (Physical file for secret mount)
 # ============================================
 echo "Preparing apps config..."
-APPS_JSON_BASE64=$(cat << APPS_JSON_EOF | base64 -w 0
+cat << APPS_JSON_EOF > apps.json
 [
   {
     "url": "https://github.com/frappe/erpnext",
@@ -50,7 +50,6 @@ APPS_JSON_BASE64=$(cat << APPS_JSON_EOF | base64 -w 0
   }
 ]
 APPS_JSON_EOF
-)
 
 # ============================================
 # FETCH RESOURCES FROM FRAPPE DOCKER
@@ -66,6 +65,8 @@ fi
 # BUILD IMAGE
 # ============================================
 echo "Building image ${FULL_IMAGE_NAME}..."
+
+sudo apt-get -y install podman
 
 podman build \
   --no-cache \
