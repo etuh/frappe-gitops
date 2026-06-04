@@ -10,4 +10,4 @@ patches:
 
 images:
   - name: ghcr.io/etuh/frappe
-    newTag: "2026-06-03"
+    newTag: "2026-06-04"
