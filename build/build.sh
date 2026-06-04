@@ -72,11 +72,14 @@ podman build \
   --build-arg FRAPPE_PATH=https://github.com/frappe/frappe \
   --build-arg FRAPPE_BRANCH=${FRAPPE_VERSION} \
   --build-arg FRAPPE_IMAGE_PREFIX=${FRAPPE_IMAGE_PREFIX} \
-  --build-arg APPS_JSON_BASE64=${APPS_JSON_BASE64} \
+  --secret id=apps_json,src=apps.json \
   --tag ${FULL_IMAGE_NAME} \
   --tag ${LATEST_IMAGE_NAME} \
   --file build/Containerfile \
   .
+
+# Clean up the local plain-text file after building
+rm -f apps.json
 
 # ============================================
 # LOGIN TO GHCR & PUSH
